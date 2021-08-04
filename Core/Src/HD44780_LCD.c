@@ -2,9 +2,9 @@
 const uint8_t ROW_16[] = {0x00, 0x40, 0x10, 0x50};
 /************************************** Static declarations **************************************/
 
-static void lcd_Write_Data(Lcd_HandleTypeDef *lcd, uint8_t data);
-static void lcd_Write_Command(Lcd_HandleTypeDef *lcd, uint8_t command);
-static void lcd_Write(Lcd_HandleTypeDef *lcd, uint8_t data, uint8_t len);
+static void Lcd_Write_Data(Lcd_HandleTypeDef *lcd, uint8_t data);
+static void Lcd_Write_Command(Lcd_HandleTypeDef *lcd, uint8_t command);
+static void Lcd_Write(Lcd_HandleTypeDef *lcd, uint8_t data, uint8_t len);
 
 /************************************** Function definitions **************************************/
 
@@ -41,16 +41,16 @@ void Lcd_Init(Lcd_HandleTypeDef *lcd)
 {
 	if (lcd->mode == LCD_4_BIT_MODE)
 	{
-		lcd_Write_Command(lcd, 0x33);
-		lcd_Write_Command(lcd, 0x32);
-		lcd_Write_Command(lcd, FUNCTION_SET | OPT_N); // 4-bit mode
+		Lcd_Write_Command(lcd, 0x33);
+		Lcd_Write_Command(lcd, 0x32);
+		Lcd_Write_Command(lcd, FUNCTION_SET | OPT_N); // 4-bit mode
 	}
 	else
-		lcd_Write_Command(lcd, FUNCTION_SET | OPT_DL | OPT_N);
+		Lcd_Write_Command(lcd, FUNCTION_SET | OPT_DL | OPT_N);
 
-	lcd_Write_Command(lcd, CLEAR_DISPLAY);					// Clear screen
-	lcd_Write_Command(lcd, DISPLAY_ON_OFF_CONTROL | OPT_D); // Lcd-on, cursor-off, no-blink
-	lcd_Write_Command(lcd, ENTRY_MODE_SET | OPT_INC);		// Increment cursor
+	Lcd_Write_Command(lcd, CLEAR_DISPLAY);					// Clear screen
+	Lcd_Write_Command(lcd, DISPLAY_ON_OFF_CONTROL | OPT_D); // Lcd-on, cursor-off, no-blink
+	Lcd_Write_Command(lcd, ENTRY_MODE_SET | OPT_INC);		// Increment cursor
 }
 
 /**
@@ -80,7 +80,7 @@ void Lcd_String(Lcd_HandleTypeDef *lcd, char *string)
 {
 	for (uint8_t i = 0; i < strlen(string); i++)
 	{
-		lcd_Write_Data(lcd, string[i]);
+		Lcd_Write_Data(lcd, string[i]);
 	}
 }
 
@@ -89,7 +89,7 @@ void Lcd_String(Lcd_HandleTypeDef *lcd, char *string)
  */
 void Lcd_Cursor(Lcd_HandleTypeDef *lcd, uint8_t row, uint8_t col)
 {
-	lcd_Write_Command(lcd, SET_DDRAM_ADDR + ROW_16[row] + col);
+	Lcd_Write_Command(lcd, SET_DDRAM_ADDR + ROW_16[row] + col);
 }
 
 /**
@@ -97,15 +97,15 @@ void Lcd_Cursor(Lcd_HandleTypeDef *lcd, uint8_t row, uint8_t col)
  */
 void Lcd_Clear(Lcd_HandleTypeDef *lcd)
 {
-	lcd_Write_Command(lcd, CLEAR_DISPLAY);
+	Lcd_Write_Command(lcd, CLEAR_DISPLAY);
 }
 
 void Lcd_Define_Char(Lcd_HandleTypeDef *lcd, uint8_t code, uint8_t bitmap[])
 {
-	lcd_Write_Command(lcd, SETCGRAM_ADDR + (code << 3));
+	Lcd_Write_Command(lcd, SETCGRAM_ADDR + (code << 3));
 	for (uint8_t i = 0; i < 8; ++i)
 	{
-		lcd_Write_Data(lcd, bitmap[i]);
+		Lcd_Write_Data(lcd, bitmap[i]);
 	}
 }
 
@@ -114,43 +114,43 @@ void Lcd_Define_Char(Lcd_HandleTypeDef *lcd, uint8_t code, uint8_t bitmap[])
 /**
  * Write a byte to the command register
  */
-void lcd_Write_Command(Lcd_HandleTypeDef *lcd, uint8_t command)
+void Lcd_Write_Command(Lcd_HandleTypeDef *lcd, uint8_t command)
 {
 	HAL_GPIO_WritePin(lcd->rs_port, lcd->rs_pin, LCD_COMMAND_REG); // Write to command register
 
 	if (lcd->mode == LCD_4_BIT_MODE)
 	{
-		lcd_Write(lcd, (command >> 4), LCD_NIB);
-		lcd_Write(lcd, command & 0x0F, LCD_NIB);
+		Lcd_Write(lcd, (command >> 4), LCD_NIB);
+		Lcd_Write(lcd, command & 0x0F, LCD_NIB);
 	}
 	else
 	{
-		lcd_Write(lcd, command, LCD_BYTE);
+		Lcd_Write(lcd, command, LCD_BYTE);
 	}
 }
 
 /**
  * Write a byte to the data register
  */
-void lcd_Write_Data(Lcd_HandleTypeDef *lcd, uint8_t data)
+void Lcd_Write_Data(Lcd_HandleTypeDef *lcd, uint8_t data)
 {
 	HAL_GPIO_WritePin(lcd->rs_port, lcd->rs_pin, LCD_DATA_REG); // Write to data register
 
 	if (lcd->mode == LCD_4_BIT_MODE)
 	{
-		lcd_Write(lcd, data >> 4, LCD_NIB);
-		lcd_Write(lcd, data & 0x0F, LCD_NIB);
+		Lcd_Write(lcd, data >> 4, LCD_NIB);
+		Lcd_Write(lcd, data & 0x0F, LCD_NIB);
 	}
 	else
 	{
-		lcd_Write(lcd, data, LCD_BYTE);
+		Lcd_Write(lcd, data, LCD_BYTE);
 	}
 }
 
 /**
  * Set len bits on the bus and toggle the enable line
  */
-void lcd_Write(Lcd_HandleTypeDef *lcd, uint8_t data, uint8_t len)
+void Lcd_Write(Lcd_HandleTypeDef *lcd, uint8_t data, uint8_t len)
 {
 	for (uint8_t i = 0; i < len; i++)
 	{
