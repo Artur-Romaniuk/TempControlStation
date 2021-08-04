@@ -178,6 +178,8 @@ void StartLcdTask(void *argument)
     }
     else
     {
+      Lcd_Cursor(&lcd, 0, 0);
+      Lcd_String(&lcd, "Temperature:");
       Lcd_Cursor(&lcd, 1, 0);
       Lcd_Float(&lcd, (float)temperature / 16);
     }
