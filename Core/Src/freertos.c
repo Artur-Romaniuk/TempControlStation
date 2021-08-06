@@ -32,12 +32,16 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef enum
+{
+  DISPLAY_CELSIUS,
+  DISPLAY_FAHRENHEIT
+} Temperature_UnitTypeDef;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define BUTTON_PRESSED 1
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -142,7 +146,7 @@ void StartThermometerTask(void *argument)
   {
     uint16_t temperature = DS18B20_Read_Temperature(ds18b20);
     osMessageQueuePut(temperatureQueueHandle, &temperature, 0, osWaitForever);
-    osDelay(1000);
+    osDelay(500);
   }
   /* USER CODE END StartThermometerTask */
 }
@@ -165,9 +169,18 @@ void StartLcdTask(void *argument)
   Lcd_HandleTypeDef lcd = Lcd_Create(ports, pins, LCD_RS_GPIO_Port, LCD_RS_Pin, LCD_E_GPIO_Port, LCD_E_Pin, LCD_4_BIT_MODE);
 
   Lcd_String(&lcd, "Temperature:");
+
+  int temperature_unit = DISPLAY_CELSIUS;
   /* Infinite loop */
   for (;;)
   {
+
+    if (osThreadFlagsGet() == BUTTON_PRESSED)
+    {
+      temperature_unit = temperature_unit == DISPLAY_CELSIUS ? DISPLAY_FAHRENHEIT : DISPLAY_CELSIUS;
+      osThreadFlagsClear(BUTTON_PRESSED);
+    }
+
     uint16_t temperature = 0;
     osMessageQueueGet(temperatureQueueHandle, &temperature, NULL, osWaitForever);
     if (temperature == 0xffff)
@@ -181,16 +194,33 @@ void StartLcdTask(void *argument)
       Lcd_Cursor(&lcd, 0, 0);
       Lcd_String(&lcd, "Temperature:");
       Lcd_Cursor(&lcd, 1, 0);
-      Lcd_Float(&lcd, (float)temperature / 16);
+      if (temperature_unit == DISPLAY_CELSIUS)
+      {
+        Lcd_Float(&lcd, (float)temperature / 16);
+        Lcd_String(&lcd, " C");
+        Lcd_Hex(&lcd, 0xDF);
+      }
+      else
+      {
+        Lcd_Float(&lcd, (float)temperature * 0.1125 + 32);
+        Lcd_String(&lcd, " F");
+        Lcd_Hex(&lcd, 0xDF);
+      }
     }
-    osDelay(100);
+    osDelay(500);
   }
   /* USER CODE END StartLcdTask */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == USER_BUTTON_Pin)
+  {
+    osThreadFlagsSet(lcdTaskHandle, BUTTON_PRESSED);
+  }
+}
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

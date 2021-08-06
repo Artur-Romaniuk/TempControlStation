@@ -84,6 +84,11 @@ void Lcd_String(Lcd_HandleTypeDef *lcd, char *string)
 	}
 }
 
+void Lcd_Hex(Lcd_HandleTypeDef *lcd, uint8_t code)
+{
+	Lcd_Write_Data(lcd, code);
+}
+
 /**
  * Set the cursor position
  */

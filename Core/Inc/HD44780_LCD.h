@@ -74,6 +74,7 @@ void Lcd_Init(Lcd_HandleTypeDef *lcd);
 void Lcd_Int(Lcd_HandleTypeDef *lcd, int number);
 void Lcd_Float(Lcd_HandleTypeDef *lcd, float number);
 void Lcd_String(Lcd_HandleTypeDef *lcd, char *string);
+void Lcd_Hex(Lcd_HandleTypeDef *lcd, uint8_t code);
 void Lcd_Cursor(Lcd_HandleTypeDef *lcd, uint8_t row, uint8_t col);
 Lcd_HandleTypeDef Lcd_Create(
 	Lcd_PortType port[], Lcd_PinType pin[],
