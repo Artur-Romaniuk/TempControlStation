@@ -36,7 +36,7 @@ extern const uint8_t ROW_16[];
 #define SET_DDRAM_ADDR 0x80 // Set DDRAM address
 
 /************************************** Helper macros **************************************/
-#define DELAY(X) HAL_Delay(X)
+#define LCD_DELAY(X) HAL_Delay(X)
 
 /************************************** LCD defines **************************************/
 #define LCD_NIB 4

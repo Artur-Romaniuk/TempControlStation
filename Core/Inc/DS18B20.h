@@ -2,13 +2,17 @@
 #define INC_DS18B20_H_
 
 #include "stm32f4xx_hal.h"
+#include "cmsis_os.h"
 #include "gpio.h"
 #include "tim.h"
 
-#define MICRO_DELAY_TIM_HANDLE &htim7
+#define MICRO_DELAY_TIM_HANDLE &htim7 //timer needed with Micro s tick
+#define DS18B20_DELAY(X) osDelay(X)
 
 #define DS18B20_PortType GPIO_TypeDef *
 #define DS18B20_PinType uint16_t
+
+#define DS18B20_ERROR 0xffff //error code to be returned
 
 typedef struct
 {
@@ -33,7 +37,6 @@ typedef struct
 
 /*********FUNCTIONS**************/
 DS18B20_HandleTypeDef DS18B20_Create(DS18B20_PortType data_port, DS18B20_PinType data_pin);
-uint16_t DS18B20_Read_Temperature(DS18B20_HandleTypeDef ds18b20); //return temperature if successful, 0xffff if not. Value has to be divided by 16
-//float DS18B20_Read_Temperature_NB(); //Non blocking version
+uint16_t DS18B20_Read_Temperature(DS18B20_HandleTypeDef ds18b20); //return temperature if successful, error code if not. Value has to be divided by 16
 
 #endif /* INC_DS18B20_H_ */

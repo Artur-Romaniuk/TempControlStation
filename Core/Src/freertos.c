@@ -32,6 +32,8 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+
+//enum used for changing temperature unit after button press
 typedef enum
 {
   DISPLAY_CELSIUS,
@@ -41,7 +43,8 @@ typedef enum
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define BUTTON_PRESSED 1
+#define BUTTON_PRESSED 1      //used with ThreadFlag in USER_BUTTON interrupt
+#define DEGREE_CHARACTER 0xDF //used to display degree char
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -144,6 +147,7 @@ void StartThermometerTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
+    //get temperature from sensor and send it to the LCD task
     uint16_t temperature = DS18B20_Read_Temperature(ds18b20);
     osMessageQueuePut(temperatureQueueHandle, &temperature, 0, osWaitForever);
     osDelay(500);
@@ -170,6 +174,7 @@ void StartLcdTask(void *argument)
 
   Lcd_String(&lcd, "Temperature:");
 
+  //default display unit in celsius
   int temperature_unit = DISPLAY_CELSIUS;
   /* Infinite loop */
   for (;;)
@@ -177,20 +182,24 @@ void StartLcdTask(void *argument)
 
     if (osThreadFlagsGet() == BUTTON_PRESSED)
     {
+      //on button press change temp unit and clear flag
       temperature_unit = temperature_unit == DISPLAY_CELSIUS ? DISPLAY_FAHRENHEIT : DISPLAY_CELSIUS;
       osThreadFlagsClear(BUTTON_PRESSED);
     }
 
+    //get temperature from sensor
     uint16_t temperature = 0;
     osMessageQueueGet(temperatureQueueHandle, &temperature, NULL, osWaitForever);
-    if (temperature == 0xffff)
+
+    if (temperature == DS18B20_ERROR) //if sensor returned error code
     {
       Lcd_Clear(&lcd);
-      Lcd_Cursor(&lcd, 0, 0);
+      Lcd_Cursor(&lcd, 1, 0);
       Lcd_String(&lcd, "TMP ERROR");
     }
     else
     {
+      Lcd_Clear(&lcd);
       Lcd_Cursor(&lcd, 0, 0);
       Lcd_String(&lcd, "Temperature:");
       Lcd_Cursor(&lcd, 1, 0);
@@ -198,13 +207,13 @@ void StartLcdTask(void *argument)
       {
         Lcd_Float(&lcd, (float)temperature / 16);
         Lcd_String(&lcd, " C");
-        Lcd_Hex(&lcd, 0xDF);
+        Lcd_Hex(&lcd, DEGREE_CHARACTER);
       }
       else
       {
         Lcd_Float(&lcd, (float)temperature * 0.1125 + 32);
         Lcd_String(&lcd, " F");
-        Lcd_Hex(&lcd, 0xDF);
+        Lcd_Hex(&lcd, DEGREE_CHARACTER);
       }
     }
     osDelay(500);
@@ -216,7 +225,7 @@ void StartLcdTask(void *argument)
 /* USER CODE BEGIN Application */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-  if (GPIO_Pin == USER_BUTTON_Pin)
+  if (GPIO_Pin == USER_BUTTON_Pin) //on USER_BUTTON press send flag to change temp unit
   {
     osThreadFlagsSet(lcdTaskHandle, BUTTON_PRESSED);
   }

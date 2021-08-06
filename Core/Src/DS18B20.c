@@ -29,23 +29,23 @@ uint16_t DS18B20_Read_Temperature(DS18B20_HandleTypeDef ds18b20)
 {
 	if (DS18B20_Initialize(ds18b20))
 	{
-		return 0xffff; //error, no response from Thermometer
+		return DS18B20_ERROR; //error, no response from Thermometer
 	}
 	else
 	{
-		HAL_Delay(1);					//BLOCKING!
+		DS18B20_DELAY(1);				//BLOCKING!
 		Write_Byte(ds18b20, SKIP_ROM);	//Single device connected
 		Write_Byte(ds18b20, CONVERT_T); //Start temperature conversion
 
-		HAL_Delay(800); //BLOCKING! Gives time for temp conversion
+		DS18B20_DELAY(800); //BLOCKING! Gives time for temp conversion
 
 		if (DS18B20_Initialize(ds18b20))
 		{
-			return 0xffff; //error, device didn't respond
+			return DS18B20_ERROR; //error, device didn't respond
 		}
 		else
 		{
-			HAL_Delay(1);						  //BLOCKING! Waits for voltage to normalize
+			DS18B20_DELAY(1);					  //BLOCKING! Waits for voltage to normalize
 			Write_Byte(ds18b20, SKIP_ROM);		  //Single device connected
 			Write_Byte(ds18b20, READ_SCRATCHPAD); //Get temperature from the device
 			uint8_t tmp1 = Read_Byte(ds18b20);

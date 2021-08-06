@@ -163,6 +163,6 @@ void Lcd_Write(Lcd_HandleTypeDef *lcd, uint8_t data, uint8_t len)
 	}
 
 	HAL_GPIO_WritePin(lcd->en_port, lcd->en_pin, 1);
-	DELAY(1);
+	LCD_DELAY(1);
 	HAL_GPIO_WritePin(lcd->en_port, lcd->en_pin, 0); // Data receive on falling edge
 }
