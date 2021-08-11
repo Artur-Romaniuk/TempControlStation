@@ -87,6 +87,18 @@ void StartLcdTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
+/* USER CODE BEGIN PREPOSTSLEEP */
+__weak void PreSleepProcessing(uint32_t ulExpectedIdleTime)
+{
+  /* place for user code */
+}
+
+__weak void PostSleepProcessing(uint32_t ulExpectedIdleTime)
+{
+  /* place for user code */
+}
+/* USER CODE END PREPOSTSLEEP */
+
 /**
   * @brief  FreeRTOS initialization
   * @param  None
@@ -150,9 +162,15 @@ void StartThermometerTask(void *argument)
   for (;;)
   {
     //get temperature from sensor and send it to the LCD task
+    DS18B20_Initialize(ds18b20);
+    osDelay(1);
+    DS18B20_Start_Conversion(ds18b20);
+    osDelay(800);
+    DS18B20_Initialize(ds18b20);
+    osDelay(1);
     uint16_t temperature = DS18B20_Read_Temperature(ds18b20);
     osMessageQueuePut(temperatureQueueHandle, &temperature, 0, osWaitForever);
-    osDelay(500);
+    osDelay(200);
   }
   /* USER CODE END StartThermometerTask */
 }
@@ -168,22 +186,13 @@ void StartLcdTask(void *argument)
 {
   /* USER CODE BEGIN StartLcdTask */
 
-  Lcd_HandleTypeDef lcd = Lcd_Create(&hi2c1);
-
+  Lcd_HandleTypeDef lcd = Lcd_Create(&hi2c1, 0x4E); //0x4E is default slave address
+  int temperature_unit = DISPLAY_CELSIUS;           //default display unit in celsius
+  int error_flag = 0;                               //used to repaint whole LCD after an error
   Lcd_String(&lcd, "Temperature:");
-
-  //default display unit in celsius
-  int temperature_unit = DISPLAY_CELSIUS;
   /* Infinite loop */
   for (;;)
   {
-    // Lcd_Clear(&lcd);
-    // Lcd_Cursor(&lcd, 0, 0);
-    // Lcd_String(&lcd, "TMP ERROR");
-    // Lcd_Cursor(&lcd, 1, 0);
-    // Lcd_Float(&lcd, (float)420 / 16);
-    // Lcd_Hex(&lcd, DEGREE_CHARACTER);
-
     if (osThreadFlagsGet() == BUTTON_PRESSED)
     {
       //on button press change temp unit and clear flag
@@ -200,9 +209,11 @@ void StartLcdTask(void *argument)
       Lcd_Clear(&lcd);
       Lcd_Cursor(&lcd, 1, 0);
       Lcd_String(&lcd, "TMP ERROR");
+      error_flag = 1;
     }
-    else
+    else if (error_flag == 1) //if there was an error before
     {
+      error_flag = 0;
       Lcd_Clear(&lcd);
       Lcd_Cursor(&lcd, 0, 0);
       Lcd_String(&lcd, "Temperature:");
@@ -218,6 +229,18 @@ void StartLcdTask(void *argument)
         Lcd_Float(&lcd, (float)temperature * 0.1125 + 32);
         Lcd_String(&lcd, " F");
         Lcd_Hex(&lcd, DEGREE_CHARACTER);
+      }
+    }
+    else //normal case, updating only temp value
+    {
+      Lcd_Cursor(&lcd, 1, 0);
+      if (temperature_unit == DISPLAY_CELSIUS)
+      {
+        Lcd_Float(&lcd, (float)temperature / 16);
+      }
+      else
+      {
+        Lcd_Float(&lcd, (float)temperature * 0.1125 + 32);
       }
     }
     osDelay(500);

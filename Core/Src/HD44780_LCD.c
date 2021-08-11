@@ -10,14 +10,12 @@ static void Lcd_Write_Command(Lcd_HandleTypeDef *lcd, char command);
 /**
  * Create new Lcd_HandleTypeDef and initialize the Lcd
  */
-Lcd_HandleTypeDef Lcd_Create(I2C_HandleTypeDef *hi2c)
+Lcd_HandleTypeDef Lcd_Create(I2C_HandleTypeDef *i2c, uint8_t slave_address)
 {
 	Lcd_HandleTypeDef lcd;
-
-	lcd.i2c = hi2c;
-
+	lcd.i2c = i2c;
+	lcd.slave_address = slave_address;
 	Lcd_Init(&lcd);
-
 	return lcd;
 }
 
@@ -98,7 +96,6 @@ void Lcd_Cursor(Lcd_HandleTypeDef *lcd, uint8_t row, uint8_t col)
  */
 void Lcd_Clear(Lcd_HandleTypeDef *lcd)
 {
-	//Lcd_Write_Command(lcd, CLEAR_DISPLAY);
 	Lcd_Write_Command(lcd, 0x80);
 	for (int i = 0; i < 70; i++)
 	{
@@ -130,7 +127,7 @@ void Lcd_Write_Command(Lcd_HandleTypeDef *lcd, char command)
 	data_t[1] = data_u | 0x08; //en=0, rs=0
 	data_t[2] = data_l | 0x0C; //en=1, rs=0
 	data_t[3] = data_l | 0x08; //en=0, rs=0
-	HAL_I2C_Master_Transmit(lcd->i2c, SLAVE_ADDRESS_LCD, (uint8_t *)data_t, 4, 400);
+	HAL_I2C_Master_Transmit(lcd->i2c, lcd->slave_address, (uint8_t *)data_t, 4, 400);
 }
 
 /**
@@ -146,5 +143,5 @@ void Lcd_Write_Data(Lcd_HandleTypeDef *lcd, char data)
 	data_t[1] = data_u | 0x09; //en=0, rs=0
 	data_t[2] = data_l | 0x0D; //en=1, rs=0
 	data_t[3] = data_l | 0x09; //en=0, rs=0
-	HAL_I2C_Master_Transmit(lcd->i2c, SLAVE_ADDRESS_LCD, (uint8_t *)data_t, 4, 400);
+	HAL_I2C_Master_Transmit(lcd->i2c, lcd->slave_address, (uint8_t *)data_t, 4, 400);
 }

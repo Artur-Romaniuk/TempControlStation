@@ -3,12 +3,7 @@
 
 #include "stm32f4xx_hal.h"
 #include "cmsis_os.h"
-#include "gpio.h"
-#include "tim.h"
 #include "usart.h"
-
-// #define MICRO_DELAY_TIM_HANDLE &htim7 //timer needed with Micro s tick
-#define DS18B20_DELAY(X) osDelay(X)
 
 #define DS18B20_ERROR 0xffff //error code to be returned
 
@@ -34,6 +29,8 @@ typedef struct
 
 /*********FUNCTIONS**************/
 DS18B20_HandleTypeDef DS18B20_Create(UART_HandleTypeDef *huart);
+int DS18B20_Initialize(DS18B20_HandleTypeDef ds18b20);
+void DS18B20_Start_Conversion(DS18B20_HandleTypeDef ds18b20);
 uint16_t DS18B20_Read_Temperature(DS18B20_HandleTypeDef ds18b20); //return temperature if successful, error code if not. Value has to be divided by 16
 
 #endif /* INC_DS18B20_H_ */

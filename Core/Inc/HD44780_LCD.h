@@ -10,9 +10,6 @@
 // For row start addresses
 extern const uint8_t ROW_16[];
 
-/************************************** Device setup **************************************/
-#define SLAVE_ADDRESS_LCD 0x4E //default slave address
-
 /************************************** Command register **************************************/
 #define CLEAR_DISPLAY 0x01
 
@@ -38,9 +35,6 @@ extern const uint8_t ROW_16[];
 #define SETCGRAM_ADDR 0x040
 #define SET_DDRAM_ADDR 0x80 // Set DDRAM address
 
-/************************************** Helper macros **************************************/
-#define LCD_DELAY(X) HAL_Delay(X)
-
 /************************************** LCD defines **************************************/
 #define LCD_NIB 4
 #define LCD_BYTE 8
@@ -52,6 +46,7 @@ extern const uint8_t ROW_16[];
 typedef struct
 {
 	I2C_HandleTypeDef *i2c;
+	uint8_t slave_address;
 
 } Lcd_HandleTypeDef;
 
@@ -62,7 +57,7 @@ void Lcd_Float(Lcd_HandleTypeDef *lcd, float number);
 void Lcd_String(Lcd_HandleTypeDef *lcd, char *string);
 void Lcd_Hex(Lcd_HandleTypeDef *lcd, uint8_t code);
 void Lcd_Cursor(Lcd_HandleTypeDef *lcd, uint8_t row, uint8_t col);
-Lcd_HandleTypeDef Lcd_Create(I2C_HandleTypeDef *hi2c);
+Lcd_HandleTypeDef Lcd_Create(I2C_HandleTypeDef *i2c, uint8_t slave_address);
 void Lcd_Define_Char(Lcd_HandleTypeDef *lcd, uint8_t code, uint8_t bitmap[]);
 void Lcd_Clear(Lcd_HandleTypeDef *lcd);
 
