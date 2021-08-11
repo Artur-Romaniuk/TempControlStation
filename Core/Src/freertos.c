@@ -26,6 +26,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "i2c.h"
+
 #include "HD44780_LCD.h"
 #include "DS18B20.h"
 /* USER CODE END Includes */
@@ -142,7 +144,7 @@ void MX_FREERTOS_Init(void)
 void StartThermometerTask(void *argument)
 {
   /* USER CODE BEGIN StartThermometerTask */
-  DS18B20_HandleTypeDef ds18b20 = DS18B20_Create(DS18B20_DQ_GPIO_Port, DS18B20_DQ_Pin);
+  DS18B20_HandleTypeDef ds18b20 = DS18B20_Create(&huart3);
 
   /* Infinite loop */
   for (;;)
@@ -166,11 +168,7 @@ void StartLcdTask(void *argument)
 {
   /* USER CODE BEGIN StartLcdTask */
 
-  Lcd_PortType ports[] = {LCD_D4_GPIO_Port, LCD_D5_GPIO_Port, LCD_D6_GPIO_Port, LCD_D7_GPIO_Port};
-
-  Lcd_PinType pins[] = {LCD_D4_Pin, LCD_D5_Pin, LCD_D6_Pin, LCD_D7_Pin};
-
-  Lcd_HandleTypeDef lcd = Lcd_Create(ports, pins, LCD_RS_GPIO_Port, LCD_RS_Pin, LCD_E_GPIO_Port, LCD_E_Pin, LCD_4_BIT_MODE);
+  Lcd_HandleTypeDef lcd = Lcd_Create(&hi2c1);
 
   Lcd_String(&lcd, "Temperature:");
 
@@ -179,15 +177,21 @@ void StartLcdTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
+    // Lcd_Clear(&lcd);
+    // Lcd_Cursor(&lcd, 0, 0);
+    // Lcd_String(&lcd, "TMP ERROR");
+    // Lcd_Cursor(&lcd, 1, 0);
+    // Lcd_Float(&lcd, (float)420 / 16);
+    // Lcd_Hex(&lcd, DEGREE_CHARACTER);
 
     if (osThreadFlagsGet() == BUTTON_PRESSED)
     {
       //on button press change temp unit and clear flag
-      temperature_unit = temperature_unit == DISPLAY_CELSIUS ? DISPLAY_FAHRENHEIT : DISPLAY_CELSIUS;
+      temperature_unit = (temperature_unit == DISPLAY_CELSIUS) ? DISPLAY_FAHRENHEIT : DISPLAY_CELSIUS;
       osThreadFlagsClear(BUTTON_PRESSED);
     }
 
-    //get temperature from sensor
+    // //get temperature from sensor
     uint16_t temperature = 0;
     osMessageQueueGet(temperatureQueueHandle, &temperature, NULL, osWaitForever);
 

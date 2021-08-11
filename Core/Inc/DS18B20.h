@@ -5,19 +5,16 @@
 #include "cmsis_os.h"
 #include "gpio.h"
 #include "tim.h"
+#include "usart.h"
 
-#define MICRO_DELAY_TIM_HANDLE &htim7 //timer needed with Micro s tick
+// #define MICRO_DELAY_TIM_HANDLE &htim7 //timer needed with Micro s tick
 #define DS18B20_DELAY(X) osDelay(X)
-
-#define DS18B20_PortType GPIO_TypeDef *
-#define DS18B20_PinType uint16_t
 
 #define DS18B20_ERROR 0xffff //error code to be returned
 
 typedef struct
 {
-    DS18B20_PortType data_port;
-    DS18B20_PinType data_pin;
+    UART_HandleTypeDef *huart;
 } DS18B20_HandleTypeDef;
 
 /*********ROM COMMANDS ***********/
@@ -36,7 +33,7 @@ typedef struct
 #define READ_POWER 0xB4
 
 /*********FUNCTIONS**************/
-DS18B20_HandleTypeDef DS18B20_Create(DS18B20_PortType data_port, DS18B20_PinType data_pin);
+DS18B20_HandleTypeDef DS18B20_Create(UART_HandleTypeDef *huart);
 uint16_t DS18B20_Read_Temperature(DS18B20_HandleTypeDef ds18b20); //return temperature if successful, error code if not. Value has to be divided by 16
 
 #endif /* INC_DS18B20_H_ */

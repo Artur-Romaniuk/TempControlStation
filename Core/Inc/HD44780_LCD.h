@@ -10,6 +10,9 @@
 // For row start addresses
 extern const uint8_t ROW_16[];
 
+/************************************** Device setup **************************************/
+#define SLAVE_ADDRESS_LCD 0x4E //default slave address
+
 /************************************** Command register **************************************/
 #define CLEAR_DISPLAY 0x01
 
@@ -45,27 +48,10 @@ extern const uint8_t ROW_16[];
 #define LCD_COMMAND_REG 0
 
 /************************************** LCD typedefs **************************************/
-#define Lcd_PortType GPIO_TypeDef *
-#define Lcd_PinType uint16_t
-
-typedef enum
-{
-	LCD_4_BIT_MODE,
-	LCD_8_BIT_MODE
-} Lcd_ModeTypeDef;
 
 typedef struct
 {
-	Lcd_PortType *data_port;
-	Lcd_PinType *data_pin;
-
-	Lcd_PortType rs_port;
-	Lcd_PinType rs_pin;
-
-	Lcd_PortType en_port;
-	Lcd_PinType en_pin;
-
-	Lcd_ModeTypeDef mode;
+	I2C_HandleTypeDef *i2c;
 
 } Lcd_HandleTypeDef;
 
@@ -76,10 +62,7 @@ void Lcd_Float(Lcd_HandleTypeDef *lcd, float number);
 void Lcd_String(Lcd_HandleTypeDef *lcd, char *string);
 void Lcd_Hex(Lcd_HandleTypeDef *lcd, uint8_t code);
 void Lcd_Cursor(Lcd_HandleTypeDef *lcd, uint8_t row, uint8_t col);
-Lcd_HandleTypeDef Lcd_Create(
-	Lcd_PortType port[], Lcd_PinType pin[],
-	Lcd_PortType rs_port, Lcd_PinType rs_pin,
-	Lcd_PortType en_port, Lcd_PinType en_pin, Lcd_ModeTypeDef mode);
+Lcd_HandleTypeDef Lcd_Create(I2C_HandleTypeDef *hi2c);
 void Lcd_Define_Char(Lcd_HandleTypeDef *lcd, uint8_t code, uint8_t bitmap[]);
 void Lcd_Clear(Lcd_HandleTypeDef *lcd);
 
