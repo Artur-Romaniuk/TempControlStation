@@ -2,35 +2,20 @@
 const uint8_t ROW_16[] = {0x00, 0x40, 0x10, 0x50};
 /************************************** Static declarations **************************************/
 
-static void Lcd_Write_Data(Lcd_HandleTypeDef *lcd, uint8_t data);
-static void Lcd_Write_Command(Lcd_HandleTypeDef *lcd, uint8_t command);
-static void Lcd_Write(Lcd_HandleTypeDef *lcd, uint8_t data, uint8_t len);
+static void Lcd_Write_Data(Lcd_HandleTypeDef *lcd, char data);
+static void Lcd_Write_Command(Lcd_HandleTypeDef *lcd, char command);
 
 /************************************** Function definitions **************************************/
 
 /**
  * Create new Lcd_HandleTypeDef and initialize the Lcd
  */
-Lcd_HandleTypeDef Lcd_Create(
-	Lcd_PortType port[], Lcd_PinType pin[],
-	Lcd_PortType rs_port, Lcd_PinType rs_pin,
-	Lcd_PortType en_port, Lcd_PinType en_pin, Lcd_ModeTypeDef mode)
+Lcd_HandleTypeDef Lcd_Create(I2C_HandleTypeDef *i2c, uint8_t slave_address)
 {
 	Lcd_HandleTypeDef lcd;
-
-	lcd.mode = mode;
-
-	lcd.en_pin = en_pin;
-	lcd.en_port = en_port;
-
-	lcd.rs_pin = rs_pin;
-	lcd.rs_port = rs_port;
-
-	lcd.data_pin = pin;
-	lcd.data_port = port;
-
+	lcd.i2c = i2c;
+	lcd.slave_address = slave_address;
 	Lcd_Init(&lcd);
-
 	return lcd;
 }
 
@@ -39,18 +24,27 @@ Lcd_HandleTypeDef Lcd_Create(
  */
 void Lcd_Init(Lcd_HandleTypeDef *lcd)
 {
-	if (lcd->mode == LCD_4_BIT_MODE)
-	{
-		Lcd_Write_Command(lcd, 0x33);
-		Lcd_Write_Command(lcd, 0x32);
-		Lcd_Write_Command(lcd, FUNCTION_SET | OPT_N); // 4-bit mode
-	}
-	else
-		Lcd_Write_Command(lcd, FUNCTION_SET | OPT_DL | OPT_N);
+	// 4 bit initialisation
+	HAL_Delay(50); // wait for >40ms
+	Lcd_Write_Command(lcd, 0x30);
+	HAL_Delay(5); // wait for >4.1ms
+	Lcd_Write_Command(lcd, 0x30);
+	HAL_Delay(1); // wait for >100us
+	Lcd_Write_Command(lcd, 0x30);
+	HAL_Delay(10);
+	Lcd_Write_Command(lcd, FUNCTION_SET); // 4bit mode
+	HAL_Delay(10);
 
-	Lcd_Write_Command(lcd, CLEAR_DISPLAY);					// Clear screen
-	Lcd_Write_Command(lcd, DISPLAY_ON_OFF_CONTROL | OPT_D); // Lcd-on, cursor-off, no-blink
-	Lcd_Write_Command(lcd, ENTRY_MODE_SET | OPT_INC);		// Increment cursor
+	// display initialisation
+	Lcd_Write_Command(lcd, FUNCTION_SET | OPT_N); // Function set --> DL=0 (4 bit mode), N = 1 (2 line display) F = 0 (5x8 characters)
+	HAL_Delay(1);
+	Lcd_Write_Command(lcd, DISPLAY_ON_OFF_CONTROL); //Display on/off control --> D=0,C=0, B=0  ---> display off
+	HAL_Delay(1);
+	Lcd_Write_Command(lcd, CLEAR_DISPLAY); // clear display
+	HAL_Delay(1);
+	Lcd_Write_Command(lcd, OPT_D | OPT_C); //Entry mode set --> I/D = 1 (increment cursor) & S = 0 (no shift)
+	HAL_Delay(1);
+	Lcd_Write_Command(lcd, DISPLAY_ON_OFF_CONTROL | OPT_D); //Display on/off control --> D = 1, C and B = 0. (Cursor and blink, last two bits)
 }
 
 /**
@@ -102,7 +96,11 @@ void Lcd_Cursor(Lcd_HandleTypeDef *lcd, uint8_t row, uint8_t col)
  */
 void Lcd_Clear(Lcd_HandleTypeDef *lcd)
 {
-	Lcd_Write_Command(lcd, CLEAR_DISPLAY);
+	Lcd_Write_Command(lcd, 0x80);
+	for (int i = 0; i < 70; i++)
+	{
+		Lcd_Write_Data(lcd, ' ');
+	}
 }
 
 void Lcd_Define_Char(Lcd_HandleTypeDef *lcd, uint8_t code, uint8_t bitmap[])
@@ -119,50 +117,31 @@ void Lcd_Define_Char(Lcd_HandleTypeDef *lcd, uint8_t code, uint8_t bitmap[])
 /**
  * Write a byte to the command register
  */
-void Lcd_Write_Command(Lcd_HandleTypeDef *lcd, uint8_t command)
+void Lcd_Write_Command(Lcd_HandleTypeDef *lcd, char command)
 {
-	HAL_GPIO_WritePin(lcd->rs_port, lcd->rs_pin, LCD_COMMAND_REG); // Write to command register
-
-	if (lcd->mode == LCD_4_BIT_MODE)
-	{
-		Lcd_Write(lcd, (command >> 4), LCD_NIB);
-		Lcd_Write(lcd, command & 0x0F, LCD_NIB);
-	}
-	else
-	{
-		Lcd_Write(lcd, command, LCD_BYTE);
-	}
+	char data_u, data_l;
+	uint8_t data_t[4];
+	data_u = (command & 0xf0);
+	data_l = ((command << 4) & 0xf0);
+	data_t[0] = data_u | 0x0C; //en=1, rs=0
+	data_t[1] = data_u | 0x08; //en=0, rs=0
+	data_t[2] = data_l | 0x0C; //en=1, rs=0
+	data_t[3] = data_l | 0x08; //en=0, rs=0
+	HAL_I2C_Master_Transmit(lcd->i2c, lcd->slave_address, (uint8_t *)data_t, 4, 400);
 }
 
 /**
  * Write a byte to the data register
  */
-void Lcd_Write_Data(Lcd_HandleTypeDef *lcd, uint8_t data)
+void Lcd_Write_Data(Lcd_HandleTypeDef *lcd, char data)
 {
-	HAL_GPIO_WritePin(lcd->rs_port, lcd->rs_pin, LCD_DATA_REG); // Write to data register
-
-	if (lcd->mode == LCD_4_BIT_MODE)
-	{
-		Lcd_Write(lcd, data >> 4, LCD_NIB);
-		Lcd_Write(lcd, data & 0x0F, LCD_NIB);
-	}
-	else
-	{
-		Lcd_Write(lcd, data, LCD_BYTE);
-	}
-}
-
-/**
- * Set len bits on the bus and toggle the enable line
- */
-void Lcd_Write(Lcd_HandleTypeDef *lcd, uint8_t data, uint8_t len)
-{
-	for (uint8_t i = 0; i < len; i++)
-	{
-		HAL_GPIO_WritePin(lcd->data_port[i], lcd->data_pin[i], (data >> i) & 0x01);
-	}
-
-	HAL_GPIO_WritePin(lcd->en_port, lcd->en_pin, 1);
-	LCD_DELAY(1);
-	HAL_GPIO_WritePin(lcd->en_port, lcd->en_pin, 0); // Data receive on falling edge
+	char data_u, data_l;
+	uint8_t data_t[4];
+	data_u = (data & 0xf0);
+	data_l = ((data << 4) & 0xf0);
+	data_t[0] = data_u | 0x0D; //en=1, rs=0
+	data_t[1] = data_u | 0x09; //en=0, rs=0
+	data_t[2] = data_l | 0x0D; //en=1, rs=0
+	data_t[3] = data_l | 0x09; //en=0, rs=0
+	HAL_I2C_Master_Transmit(lcd->i2c, lcd->slave_address, (uint8_t *)data_t, 4, 400);
 }
