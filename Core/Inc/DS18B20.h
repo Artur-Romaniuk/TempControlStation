@@ -5,8 +5,6 @@
 #include "cmsis_os.h"
 #include "usart.h"
 
-#define DS18B20_ERROR 0xffff //error code to be returned
-
 typedef struct
 {
     UART_HandleTypeDef *huart;
@@ -29,7 +27,7 @@ typedef struct
 
 /*********FUNCTIONS**************/
 DS18B20_HandleTypeDef DS18B20_Create(UART_HandleTypeDef *huart);
-int DS18B20_Initialize(DS18B20_HandleTypeDef ds18b20);
+HAL_StatusTypeDef DS18B20_Initialize(DS18B20_HandleTypeDef ds18b20);
 void DS18B20_Start_Conversion(DS18B20_HandleTypeDef ds18b20);
 uint16_t DS18B20_Read_Temperature(DS18B20_HandleTypeDef ds18b20); //return temperature if successful, error code if not. Value has to be divided by 16
 

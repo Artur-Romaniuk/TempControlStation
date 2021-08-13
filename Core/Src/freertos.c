@@ -27,7 +27,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "i2c.h"
-
 #include "HD44780_LCD.h"
 #include "DS18B20.h"
 /* USER CODE END Includes */
@@ -161,15 +160,22 @@ void StartThermometerTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
+    HAL_StatusTypeDef status = HAL_OK;
     //get temperature from sensor and send it to the LCD task
-    DS18B20_Initialize(ds18b20);
+    status += DS18B20_Initialize(ds18b20);
     osDelay(1);
-    DS18B20_Start_Conversion(ds18b20);
-    osDelay(800);
-    DS18B20_Initialize(ds18b20);
-    osDelay(1);
-    uint16_t temperature = DS18B20_Read_Temperature(ds18b20);
-    osMessageQueuePut(temperatureQueueHandle, &temperature, 0, osWaitForever);
+    if (status == HAL_OK)
+    {
+      DS18B20_Start_Conversion(ds18b20);
+      osDelay(800);
+    }
+    status += DS18B20_Initialize(ds18b20);
+    if (status == HAL_OK)
+    {
+      osDelay(1);
+      uint16_t temperature = DS18B20_Read_Temperature(ds18b20);
+      osMessageQueuePut(temperatureQueueHandle, &temperature, 0, 100);
+    }
     osDelay(200);
   }
   /* USER CODE END StartThermometerTask */
@@ -189,7 +195,9 @@ void StartLcdTask(void *argument)
   Lcd_HandleTypeDef lcd = Lcd_Create(&hi2c1, 0x4E); //0x4E is default slave address
   int temperature_unit = DISPLAY_CELSIUS;           //default display unit in celsius
   int error_flag = 0;                               //used to repaint whole LCD after an error
-  Lcd_String(&lcd, "Temperature:");
+  Lcd_String(&lcd, "Temp:");
+  Lcd_Cursor(&lcd, 0, 14);
+  Lcd_Hex(&lcd, DEGREE_CHARACTER);
   /* Infinite loop */
   for (;;)
   {
@@ -202,45 +210,37 @@ void StartLcdTask(void *argument)
 
     // //get temperature from sensor
     uint16_t temperature = 0;
-    osMessageQueueGet(temperatureQueueHandle, &temperature, NULL, osWaitForever);
+    osStatus_t status = osMessageQueueGet(temperatureQueueHandle, &temperature, NULL, osWaitForever);
 
-    if (temperature == DS18B20_ERROR) //if sensor returned error code
+    if (status != osOK) //if sensor returned error code
     {
       Lcd_Clear(&lcd);
       Lcd_Cursor(&lcd, 1, 0);
       Lcd_String(&lcd, "TMP ERROR");
       error_flag = 1;
     }
-    else if (error_flag == 1) //if there was an error before
+    else
     {
-      error_flag = 0;
-      Lcd_Clear(&lcd);
-      Lcd_Cursor(&lcd, 0, 0);
-      Lcd_String(&lcd, "Temperature:");
-      Lcd_Cursor(&lcd, 1, 0);
+      if (error_flag == 1) //if there was an error before, but now there is a correct reading
+      {                    //used to redraw lcd screen after "TMP ERROR" message
+        error_flag = 0;
+        Lcd_Clear(&lcd);
+        Lcd_Cursor(&lcd, 0, 0);
+        Lcd_String(&lcd, "Temp:");
+        Lcd_Cursor(&lcd, 0, 14);
+        Lcd_Hex(&lcd, DEGREE_CHARACTER);
+      }
+      Lcd_Cursor(&lcd, 0, 5);
+
       if (temperature_unit == DISPLAY_CELSIUS)
       {
         Lcd_Float(&lcd, (float)temperature / 16);
         Lcd_String(&lcd, " C");
-        Lcd_Hex(&lcd, DEGREE_CHARACTER);
       }
       else
       {
         Lcd_Float(&lcd, (float)temperature * 0.1125 + 32);
         Lcd_String(&lcd, " F");
-        Lcd_Hex(&lcd, DEGREE_CHARACTER);
-      }
-    }
-    else //normal case, updating only temp value
-    {
-      Lcd_Cursor(&lcd, 1, 0);
-      if (temperature_unit == DISPLAY_CELSIUS)
-      {
-        Lcd_Float(&lcd, (float)temperature / 16);
-      }
-      else
-      {
-        Lcd_Float(&lcd, (float)temperature * 0.1125 + 32);
       }
     }
     osDelay(500);
@@ -250,6 +250,7 @@ void StartLcdTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   if (GPIO_Pin == USER_BUTTON_Pin) //on USER_BUTTON press send flag to change temp unit

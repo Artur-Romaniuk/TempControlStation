@@ -21,7 +21,7 @@ DS18B20_HandleTypeDef DS18B20_Create(UART_HandleTypeDef *uart)
 	return ds18b20;
 }
 
-int DS18B20_Initialize(DS18B20_HandleTypeDef ds18b20)
+HAL_StatusTypeDef DS18B20_Initialize(DS18B20_HandleTypeDef ds18b20)
 {
 	uint8_t data_out = 0xF0;
 	uint8_t data_in = 0;
@@ -32,9 +32,9 @@ int DS18B20_Initialize(DS18B20_HandleTypeDef ds18b20)
 	Set_Baudrate(115200);
 
 	if (data_in != 0xF0)
-		return 0;
+		return HAL_OK;
 	else
-		return 1;
+		return HAL_ERROR;
 }
 
 void DS18B20_Start_Conversion(DS18B20_HandleTypeDef ds18b20)
