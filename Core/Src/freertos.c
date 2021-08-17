@@ -26,6 +26,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "rtc.h"
 #include "i2c.h"
 #include "HD44780_LCD.h"
 #include "DS18B20.h"
@@ -109,12 +110,14 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 /* USER CODE BEGIN PREPOSTSLEEP */
 __weak void PreSleepProcessing(uint32_t ulExpectedIdleTime)
 {
-  /* place for user code */
+  HAL_RTCEx_SetWakeUpTimer(&hrtc, ulExpectedIdleTime * 2, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
+  HAL_SuspendTick();
 }
 
 __weak void PostSleepProcessing(uint32_t ulExpectedIdleTime)
 {
-  /* place for user code */
+  HAL_ResumeTick();
+  HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
 }
 /* USER CODE END PREPOSTSLEEP */
 
@@ -189,8 +192,8 @@ void StartThermometerTask(void *argument)
     osDelay(1);
     if (status == HAL_OK)
     {
-      DS18B20_Start_Conversion(&ds18b20);
-      osDelay(800);
+      DS18B20_Start_Conversion(&ds18b20); //start conversion
+      osDelay(800); //give time for conversion. other tasks can do their thing now
     }
     status += DS18B20_Initialize(&ds18b20);
     if (status == HAL_OK)
@@ -221,6 +224,8 @@ void StartLcdTask(void *argument)
   uint16_t temperature = 0;
   int error_flag = 0; //used to repaint whole LCD after an error
   volatile osStatus_t ds18b20_status = osOK;
+  Lcd_Clear(&lcd);
+  Lcd_Cursor(&lcd, 0, 0);
   Lcd_String(&lcd, "Temp:");
   Lcd_Cursor(&lcd, 0, 14);
   Lcd_Hex(&lcd, DEGREE_CHARACTER);

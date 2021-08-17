@@ -49,7 +49,7 @@ void LPS25HB_Set_Frequency(LPS25HB_HandleTypeDef *lps25hb, LPS25HB_FrequencyType
 }
 
 /**
- * @brief Reads temperature from LPS25HB in blocking mode.
+ * @brief Reads temperature from LPS25HB in blocking mode. Returns value in celsius.
  * 
  * @param lps25hb 
  * @return float 
@@ -62,7 +62,7 @@ float LPS25HB_Read_Temperature(LPS25HB_HandleTypeDef *lps25hb)
 }
 
 /**
- * @brief Reads pressure from LPS25HB in blocking mode. Return value has te be divided by 4096 in order to achieve value in hPa.
+ * @brief Reads pressure from LPS25HB in blocking mode. Returns value in hPa.
  * 
  * @param lps25hb 
  * @return float 
@@ -84,6 +84,8 @@ void LPS25HB_Read_Pressure_DMA(LPS25HB_HandleTypeDef *lps25hb, int32_t *pressure
 {
     HAL_I2C_Mem_Read_DMA(lps25hb->i2c, lps25hb->slave_address, LPS25HB_PRESS_OUT_XL | 0x80, 1, (uint8_t *)pressure, 3); //reading 24 bit
 }
+
+/************************************** Static funtions **************************************/
 
 /**
  * @brief Static function used to make writing to peripheral memory easier.
