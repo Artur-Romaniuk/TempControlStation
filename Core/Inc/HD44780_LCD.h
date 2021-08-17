@@ -42,7 +42,6 @@ extern const uint8_t ROW_16[];
 #define LCD_COMMAND_REG 0
 
 /************************************** LCD typedefs **************************************/
-
 typedef struct
 {
 	I2C_HandleTypeDef *i2c;

@@ -5,22 +5,13 @@
 #include "cmsis_os.h"
 #include "i2c.h"
 
+/**
+ * @brief Slave address of this specific device 
+ * 
+ */
 #define LPS25HB_ADDR 0xBA
 
-/****** Registers ******/
-#define LPS25HB_WHO_AM_I 0x0F
-#define LPS25HB_CTRL_REG1 0x20
-#define LPS25HB_CTRL_REG2 0x21
-#define LPS25HB_CTRL_REG3 0x22
-#define LPS25HB_CTRL_REG4 0x23
-#define LPS25HB_PRESS_OUT_XL 0x28
-#define LPS25HB_PRESS_OUT_L 0x29
-#define LPS25HB_PRESS_OUT_H 0x2A
-#define LPS25HB_TEMP_OUT_L 0x2B
-#define LPS25HB_TEMP_OUT_H 0x2C
-#define LPS25HB_RPDS_L 0x39
-#define LPS25HB_RPDS_H 0x3A
-
+/************************************** Typedefs **************************************/
 typedef enum
 {
     ONE_SHOT,
@@ -36,7 +27,22 @@ typedef struct
     uint8_t slave_address;
 } LPS25HB_HandleTypeDef;
 
-LPS25HB_HandleTypeDef LPS25HB_Create(I2C_HandleTypeDef *i2c, uint8_t slave_adress);
+/************************************** Registers **************************************/
+#define LPS25HB_WHO_AM_I 0x0F
+#define LPS25HB_CTRL_REG1 0x20
+#define LPS25HB_CTRL_REG2 0x21
+#define LPS25HB_CTRL_REG3 0x22
+#define LPS25HB_CTRL_REG4 0x23
+#define LPS25HB_PRESS_OUT_XL 0x28
+#define LPS25HB_PRESS_OUT_L 0x29
+#define LPS25HB_PRESS_OUT_H 0x2A
+#define LPS25HB_TEMP_OUT_L 0x2B
+#define LPS25HB_TEMP_OUT_H 0x2C
+#define LPS25HB_RPDS_L 0x39
+#define LPS25HB_RPDS_H 0x3A
+
+/************************************** Public functions **************************************/
+LPS25HB_HandleTypeDef LPS25HB_Create(I2C_HandleTypeDef *i2c, uint8_t slave_address);
 void LPS25HB_Set_Frequency(LPS25HB_HandleTypeDef *lps25hb, LPS25HB_FrequencyTypeDef freq);
 float LPS25HB_Read_Temperature(LPS25HB_HandleTypeDef *lps25hb);
 float LPS25HB_Read_Pressure(LPS25HB_HandleTypeDef *lps25hb);
