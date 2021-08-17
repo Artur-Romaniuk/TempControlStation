@@ -29,12 +29,16 @@
 #include "i2c.h"
 #include "HD44780_LCD.h"
 #include "DS18B20.h"
+#include "LPS25HB.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-//enum used for changing temperature unit after button press
+/**
+ * @brief Enum used for changing temperature unit after button press.
+ * 
+ */
 typedef enum
 {
   DISPLAY_CELSIUS,
@@ -44,8 +48,11 @@ typedef enum
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define BUTTON_PRESSED 1      //used with ThreadFlag in USER_BUTTON interrupt
-#define DEGREE_CHARACTER 0xDF //used to display degree char
+#define BLUE_BUTTON_PRESSED 0x01         ///Macro used with LcdThreadFlag in USER_BUTTON interrupt.
+#define LPS25HB_DMA_Complete 0x02        ///Macro used with LcdThreadFlag in DMA interrupt
+#define DS18B20_Conversion_Complete 0x04 ///Macro used with LcdThreadFlag with DS18B20 sensor.
+
+#define DEGREE_CHARACTER 0xDF ///Define used to display degree char.
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -56,6 +63,11 @@ typedef enum
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 
+/**
+ * @brief Global variable used by pressureTask to write pressure value from the LPS25HB and by LCD to display current value. 
+ * 
+ */
+int32_t pressure = 0;
 /* USER CODE END Variables */
 /* Definitions for thermometerTask */
 osThreadId_t thermometerTaskHandle;
@@ -71,6 +83,13 @@ const osThreadAttr_t lcdTask_attributes = {
     .stack_size = 256 * 4,
     .priority = (osPriority_t)osPriorityLow,
 };
+/* Definitions for pressureTask */
+osThreadId_t pressureTaskHandle;
+const osThreadAttr_t pressureTask_attributes = {
+    .name = "pressureTask",
+    .stack_size = 256 * 4,
+    .priority = (osPriority_t)osPriorityBelowNormal7,
+};
 /* Definitions for temperatureQueue */
 osMessageQueueId_t temperatureQueueHandle;
 const osMessageQueueAttr_t temperatureQueue_attributes = {
@@ -83,6 +102,7 @@ const osMessageQueueAttr_t temperatureQueue_attributes = {
 
 void StartThermometerTask(void *argument);
 void StartLcdTask(void *argument);
+void StartPressureTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -136,6 +156,9 @@ void MX_FREERTOS_Init(void)
   /* creation of lcdTask */
   lcdTaskHandle = osThreadNew(StartLcdTask, NULL, &lcdTask_attributes);
 
+  /* creation of pressureTask */
+  pressureTaskHandle = osThreadNew(StartPressureTask, NULL, &pressureTask_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -160,23 +183,24 @@ void StartThermometerTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
-    HAL_StatusTypeDef status = HAL_OK;
+    volatile HAL_StatusTypeDef status = HAL_OK;
     //get temperature from sensor and send it to the LCD task
-    status += DS18B20_Initialize(ds18b20);
+    status += DS18B20_Initialize(&ds18b20);
     osDelay(1);
     if (status == HAL_OK)
     {
-      DS18B20_Start_Conversion(ds18b20);
+      DS18B20_Start_Conversion(&ds18b20);
       osDelay(800);
     }
-    status += DS18B20_Initialize(ds18b20);
+    status += DS18B20_Initialize(&ds18b20);
     if (status == HAL_OK)
     {
       osDelay(1);
-      uint16_t temperature = DS18B20_Read_Temperature(ds18b20);
-      osMessageQueuePut(temperatureQueueHandle, &temperature, 0, 100);
+      uint16_t temperature = DS18B20_Read_Temperature(&ds18b20);
+      osMessageQueuePut(temperatureQueueHandle, &temperature, 0, 10); //sends temperature value do LCD
+      osThreadFlagsSet(lcdTaskHandle, DS18B20_Conversion_Complete);   //tels LCD that temperature is ready to be displayed
     }
-    osDelay(200);
+    osDelay(100);
   }
   /* USER CODE END StartThermometerTask */
 }
@@ -192,30 +216,43 @@ void StartLcdTask(void *argument)
 {
   /* USER CODE BEGIN StartLcdTask */
 
-  Lcd_HandleTypeDef lcd = Lcd_Create(&hi2c1, 0x4E); //0x4E is default slave address
+  Lcd_HandleTypeDef lcd = Lcd_Create(&hi2c3, 0x4E); //0x4E is default slave address
   int temperature_unit = DISPLAY_CELSIUS;           //default display unit in celsius
-  int error_flag = 0;                               //used to repaint whole LCD after an error
+  uint16_t temperature = 0;
+  int error_flag = 0; //used to repaint whole LCD after an error
+  volatile osStatus_t ds18b20_status = osOK;
   Lcd_String(&lcd, "Temp:");
   Lcd_Cursor(&lcd, 0, 14);
   Lcd_Hex(&lcd, DEGREE_CHARACTER);
+  Lcd_Cursor(&lcd, 1, 0);
+  Lcd_String(&lcd, "Pres:");
+  Lcd_Cursor(&lcd, 1, 13);
+  Lcd_String(&lcd, "hPa");
   /* Infinite loop */
   for (;;)
   {
-    if (osThreadFlagsGet() == BUTTON_PRESSED)
+    if ((osThreadFlagsGet() & LPS25HB_DMA_Complete) == LPS25HB_DMA_Complete) //if there is updated pressure value
     {
-      //on button press change temp unit and clear flag
-      temperature_unit = (temperature_unit == DISPLAY_CELSIUS) ? DISPLAY_FAHRENHEIT : DISPLAY_CELSIUS;
-      osThreadFlagsClear(BUTTON_PRESSED);
+      Lcd_Cursor(&lcd, 1, 5);
+      Lcd_Float_Decimal(&lcd, (float)pressure / 4096, 2); //dividing result value in order to achieve hPa
+      osThreadFlagsClear(LPS25HB_DMA_Complete);
     }
-
-    // //get temperature from sensor
-    uint16_t temperature = 0;
-    osStatus_t status = osMessageQueueGet(temperatureQueueHandle, &temperature, NULL, osWaitForever);
-
-    if (status != osOK) //if sensor returned error code
+    if ((osThreadFlagsGet() & BLUE_BUTTON_PRESSED) == BLUE_BUTTON_PRESSED)
+    {
+      //on blue button press change temp unit
+      temperature_unit = (temperature_unit == DISPLAY_CELSIUS) ? DISPLAY_FAHRENHEIT : DISPLAY_CELSIUS;
+      osThreadFlagsClear(BLUE_BUTTON_PRESSED);
+    }
+    if ((osThreadFlagsGet() & DS18B20_Conversion_Complete) == DS18B20_Conversion_Complete)
+    {
+      //if there is new temperature value
+      ds18b20_status = osMessageQueueGet(temperatureQueueHandle, &temperature, NULL, 10); //get temperature from sensor
+      osThreadFlagsClear(DS18B20_Conversion_Complete);
+    }
+    if (ds18b20_status != osOK) //if temperature sensor returned error code
     {
       Lcd_Clear(&lcd);
-      Lcd_Cursor(&lcd, 1, 0);
+      Lcd_Cursor(&lcd, 0, 0);
       Lcd_String(&lcd, "TMP ERROR");
       error_flag = 1;
     }
@@ -234,28 +271,60 @@ void StartLcdTask(void *argument)
 
       if (temperature_unit == DISPLAY_CELSIUS)
       {
-        Lcd_Float(&lcd, (float)temperature / 16);
+        Lcd_Float(&lcd, (float)temperature / 16); //celsius conversion
         Lcd_String(&lcd, " C");
       }
       else
       {
-        Lcd_Float(&lcd, (float)temperature * 0.1125 + 32);
+        Lcd_Float(&lcd, (float)temperature * 0.1125 + 32); //fahrenheit conversion
         Lcd_String(&lcd, " F");
       }
     }
-    osDelay(500);
+
+    osDelay(50);
   }
   /* USER CODE END StartLcdTask */
+}
+
+/* USER CODE BEGIN Header_StartPressureTask */
+/**
+* @brief Function implementing the pressureTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartPressureTask */
+void StartPressureTask(void *argument)
+{
+  /* USER CODE BEGIN StartPressureTask */
+  LPS25HB_HandleTypeDef lps25hb = LPS25HB_Create(&hi2c3, LPS25HB_ADDR); //creating instance of the peripheral
+  LPS25HB_Set_Frequency(&lps25hb, _1_HZ);                               //setting freq
+  osDelay(100);
+
+  /* Infinite loop */
+  for (;;)
+  {
+    LPS25HB_Read_Pressure_DMA(&lps25hb, &pressure);
+    osDelay(1000); //1 Hz
+  }
+  /* USER CODE END StartPressureTask */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
 
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+  if (hi2c == &hi2c3)
+  {
+    osThreadFlagsSet(lcdTaskHandle, LPS25HB_DMA_Complete); //sends msg to LCD about new pressure value
+  }
+}
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   if (GPIO_Pin == USER_BUTTON_Pin) //on USER_BUTTON press send flag to change temp unit
   {
-    osThreadFlagsSet(lcdTaskHandle, BUTTON_PRESSED);
+    osThreadFlagsSet(lcdTaskHandle, BLUE_BUTTON_PRESSED);
   }
 }
 /* USER CODE END Application */

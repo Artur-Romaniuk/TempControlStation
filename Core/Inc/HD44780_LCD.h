@@ -11,29 +11,29 @@
 extern const uint8_t ROW_16[];
 
 /************************************** Command register **************************************/
-#define CLEAR_DISPLAY 0x01
+#define LCD_CLEAR_DISPLAY 0x01
 
-#define RETURN_HOME 0x02
+#define LCD_RETURN_HOME 0x02
 
-#define ENTRY_MODE_SET 0x04
-#define OPT_S 0x01	 // Shift entire display to right
-#define OPT_INC 0x02 // Cursor increment
+#define LCD_ENTRY_MODE_SET 0x04
+#define LCD_OPT_S 0x01	 // Shift entire display to right
+#define LCD_OPT_INC 0x02 // Cursor increment
 
-#define DISPLAY_ON_OFF_CONTROL 0x08
-#define OPT_D 0x04 // Turn on display
-#define OPT_C 0x02 // Turn on cursor
-#define OPT_B 0x01 // Turn on cursor blink
+#define LCD_DISPLAY_ON_OFF_CONTROL 0x08
+#define LCD_OPT_D 0x04 // Turn on display
+#define LCD_OPT_C 0x02 // Turn on cursor
+#define LCD_OPT_B 0x01 // Turn on cursor blink
 
-#define CURSOR_DISPLAY_SHIFT 0x10 // Move and shift cursor
-#define OPT_SC 0x08
-#define OPT_RL 0x04
+#define LCD_CURSOR_DISPLAY_SHIFT 0x10 // Move and shift cursor
+#define LCD_OPT_SC 0x08
+#define LCD_OPT_RL 0x04
 
-#define FUNCTION_SET 0x20
-#define OPT_DL 0x10 // Set interface data length
-#define OPT_N 0x08	// Set number of display lines
-#define OPT_F 0x04	// Set alternate font
-#define SETCGRAM_ADDR 0x040
-#define SET_DDRAM_ADDR 0x80 // Set DDRAM address
+#define LCD_FUNCTION_SET 0x20
+#define LCD_OPT_DL 0x10 // Set interface data length
+#define LCD_OPT_N 0x08	// Set number of display lines
+#define LCD_OPT_F 0x04	// Set alternate font
+#define LCD_SETCGRAM_ADDR 0x040
+#define LCD_SET_DDRAM_ADDR 0x80 // Set DDRAM address
 
 /************************************** LCD defines **************************************/
 #define LCD_NIB 4
@@ -42,7 +42,6 @@ extern const uint8_t ROW_16[];
 #define LCD_COMMAND_REG 0
 
 /************************************** LCD typedefs **************************************/
-
 typedef struct
 {
 	I2C_HandleTypeDef *i2c;
@@ -51,13 +50,14 @@ typedef struct
 } Lcd_HandleTypeDef;
 
 /************************************** Public functions **************************************/
+Lcd_HandleTypeDef Lcd_Create(I2C_HandleTypeDef *i2c, uint8_t slave_address);
 void Lcd_Init(Lcd_HandleTypeDef *lcd);
 void Lcd_Int(Lcd_HandleTypeDef *lcd, int number);
 void Lcd_Float(Lcd_HandleTypeDef *lcd, float number);
+void Lcd_Float_Decimal(Lcd_HandleTypeDef *lcd, float number, int decimal_places);
 void Lcd_String(Lcd_HandleTypeDef *lcd, char *string);
 void Lcd_Hex(Lcd_HandleTypeDef *lcd, uint8_t code);
 void Lcd_Cursor(Lcd_HandleTypeDef *lcd, uint8_t row, uint8_t col);
-Lcd_HandleTypeDef Lcd_Create(I2C_HandleTypeDef *i2c, uint8_t slave_address);
 void Lcd_Define_Char(Lcd_HandleTypeDef *lcd, uint8_t code, uint8_t bitmap[]);
 void Lcd_Clear(Lcd_HandleTypeDef *lcd);
 

@@ -38,6 +38,7 @@ BUILD_DIR = build
 C_SOURCES =  \
 Core/Src/DS18B20.c \
 Core/Src/HD44780_LCD.c \
+Core/Src/LPS25HB.c \
 Core/Src/dma.c \
 Core/Src/freertos.c \
 Core/Src/gpio.c \

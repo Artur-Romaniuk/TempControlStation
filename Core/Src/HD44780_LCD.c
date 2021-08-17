@@ -32,19 +32,19 @@ void Lcd_Init(Lcd_HandleTypeDef *lcd)
 	HAL_Delay(1); // wait for >100us
 	Lcd_Write_Command(lcd, 0x30);
 	HAL_Delay(10);
-	Lcd_Write_Command(lcd, FUNCTION_SET); // 4bit mode
+	Lcd_Write_Command(lcd, LCD_FUNCTION_SET); // 4bit mode
 	HAL_Delay(10);
 
 	// display initialisation
-	Lcd_Write_Command(lcd, FUNCTION_SET | OPT_N); // Function set --> DL=0 (4 bit mode), N = 1 (2 line display) F = 0 (5x8 characters)
+	Lcd_Write_Command(lcd, LCD_FUNCTION_SET | LCD_OPT_N); // Function set --> DL=0 (4 bit mode), N = 1 (2 line display) F = 0 (5x8 characters)
 	HAL_Delay(1);
-	Lcd_Write_Command(lcd, DISPLAY_ON_OFF_CONTROL); //Display on/off control --> D=0,C=0, B=0  ---> display off
+	Lcd_Write_Command(lcd, LCD_DISPLAY_ON_OFF_CONTROL); //Display on/off control --> D=0,C=0, B=0  ---> display off
 	HAL_Delay(1);
-	Lcd_Write_Command(lcd, CLEAR_DISPLAY); // clear display
+	Lcd_Write_Command(lcd, LCD_CLEAR_DISPLAY); // clear display
 	HAL_Delay(1);
-	Lcd_Write_Command(lcd, OPT_D | OPT_C); //Entry mode set --> I/D = 1 (increment cursor) & S = 0 (no shift)
+	Lcd_Write_Command(lcd, LCD_OPT_D | LCD_OPT_C); //Entry mode set --> I/D = 1 (increment cursor) & S = 0 (no shift)
 	HAL_Delay(1);
-	Lcd_Write_Command(lcd, DISPLAY_ON_OFF_CONTROL | OPT_D); //Display on/off control --> D = 1, C and B = 0. (Cursor and blink, last two bits)
+	Lcd_Write_Command(lcd, LCD_DISPLAY_ON_OFF_CONTROL | LCD_OPT_D); //Display on/off control --> D = 1, C and B = 0. (Cursor and blink, last two bits)
 }
 
 /**
@@ -65,6 +65,16 @@ void Lcd_Float(Lcd_HandleTypeDef *lcd, float number)
 	float tmpFloat = number - tmpInt;
 	int tmpIntR = trunc(tmpFloat * 1000);
 	sprintf(buffer, "%d.%04d", tmpInt, tmpIntR);
+	Lcd_String(lcd, buffer);
+}
+
+void Lcd_Float_Decimal(Lcd_HandleTypeDef *lcd, float number, int decimal_places)
+{
+	char buffer[11];
+	int tmpInt = number;
+	float tmpFloat = number - tmpInt;
+	int tmpIntR = trunc(tmpFloat * 10 * decimal_places);
+	sprintf(buffer, "%d.%0d", tmpInt, tmpIntR);
 	Lcd_String(lcd, buffer);
 }
 /**
@@ -88,7 +98,7 @@ void Lcd_Hex(Lcd_HandleTypeDef *lcd, uint8_t code)
  */
 void Lcd_Cursor(Lcd_HandleTypeDef *lcd, uint8_t row, uint8_t col)
 {
-	Lcd_Write_Command(lcd, SET_DDRAM_ADDR + ROW_16[row] + col);
+	Lcd_Write_Command(lcd, LCD_SET_DDRAM_ADDR + ROW_16[row] + col);
 }
 
 /**
@@ -105,7 +115,7 @@ void Lcd_Clear(Lcd_HandleTypeDef *lcd)
 
 void Lcd_Define_Char(Lcd_HandleTypeDef *lcd, uint8_t code, uint8_t bitmap[])
 {
-	Lcd_Write_Command(lcd, SETCGRAM_ADDR + (code << 3));
+	Lcd_Write_Command(lcd, LCD_SETCGRAM_ADDR + (code << 3));
 	for (uint8_t i = 0; i < 8; ++i)
 	{
 		Lcd_Write_Data(lcd, bitmap[i]);
