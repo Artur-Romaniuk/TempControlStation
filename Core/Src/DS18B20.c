@@ -39,14 +39,14 @@ HAL_StatusTypeDef DS18B20_Initialize(DS18B20_HandleTypeDef ds18b20)
 
 void DS18B20_Start_Conversion(DS18B20_HandleTypeDef ds18b20)
 {
-	Write_Byte(ds18b20, SKIP_ROM);	//Single device connected
-	Write_Byte(ds18b20, CONVERT_T); //Start temperature conversion
+	Write_Byte(ds18b20, DS18B20_SKIP_ROM);	//Single device connected
+	Write_Byte(ds18b20, DS18B20_CONVERT_T); //Start temperature conversion
 }
 
 uint16_t DS18B20_Read_Temperature(DS18B20_HandleTypeDef ds18b20)
 {
-	Write_Byte(ds18b20, SKIP_ROM);		  //Single device connected
-	Write_Byte(ds18b20, READ_SCRATCHPAD); //Get temperature from the device
+	Write_Byte(ds18b20, DS18B20_SKIP_ROM);		  //Single device connected
+	Write_Byte(ds18b20, DS18B20_READ_SCRATCHPAD); //Get temperature from the device
 	uint8_t tmp1 = Read_Byte(ds18b20);
 	uint8_t tmp2 = Read_Byte(ds18b20);
 	uint16_t temperature = tmp1 | (tmp2 << 8);
